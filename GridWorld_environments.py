@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import Callable, List, Dict, Tuple
 import numpy as np
 
 
@@ -29,6 +29,7 @@ class Grid_World:
                  goals: List[Tuple[int]] = []):
 
         self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
+        self.actions_to_str_map = {(1, 0): "S", (0, 1): "E", (-1, 0): "N", (0, -1): "W"}
         self.gameover, self.win, self.lose = False, False, False
 
         self.n_rows, self.n_cols = size
@@ -57,7 +58,7 @@ class Grid_World:
         # terminal states
         self._terminal_states = self.traps + self.goals
 
-    def _get_board(self):
+    def get_board(self):
         return self.board
 
     def get_action_space(self):
@@ -120,3 +121,24 @@ class Grid_World:
 
         print(f"Action '{action}' taken at position {old_pos}. New position is '{self.player_pos}' and received a reward...")
         return self.player_pos, reward, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
+
+    def display_value_function(self, value_func: Dict[Tuple[int], float]):
+        value_func_arr = np.zeros((self.n_rows, self.n_cols))
+
+        for state in value_func:
+            value_func_arr[state] = value_func[state]
+
+        print("Value function:")
+        print(value_func_arr)
+
+    def display_policy(self, value_func: Dict[Tuple[int], float], get_action_func: Callable):
+        policy_arr = np.zeros((self.n_rows, self.n_cols), str)
+
+        for state in value_func:
+            policy_arr[state] = self.actions_to_str_map[get_action_func(self.get_action_state_pairs(state=state))]
+
+        for state in self._terminal_states:
+            policy_arr[state] = "-"
+
+        print("Policy:")
+        print(policy_arr)
