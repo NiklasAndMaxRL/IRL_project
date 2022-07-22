@@ -1,4 +1,4 @@
-from typing import Callable, List, Dict, Tuple
+from typing import List, Dict, Tuple
 import numpy as np
 
 
@@ -77,6 +77,13 @@ class Grid_World:
     def _get_random_action(self):
         return self.possible_actions[np.random.choice([x for x, _ in enumerate(self.possible_actions)])]  # optimize!!!
 
+    def reset_env(self, state):
+        if state in self._state_space:
+            self.gameover, self.win, self.lose = False, False, False
+            self.player_pos = state
+        else:
+            raise ValueError(f"Invalid state '{state}' passed to reset_env()")
+
     def check_gameover(self):
         if self.player_pos in self.traps:
             self.gameover = True
@@ -103,12 +110,10 @@ class Grid_World:
     def get_state_reward(self, state: Tuple[int]):
         return self.board[state]
 
-    def take_action(self, action):
+    def take_action(self, action, verbose=False):
         if action not in self.possible_actions:
             print(f"Invalid action '{action}'. Please choose one from '{self.possible_actions}'")
             return self.player_pos, 0, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
-
-        old_pos = self.player_pos
 
         # calculate the new positon
         self.player_pos = self.get_new_state_on_action(old_state=self.player_pos, action=action)
@@ -119,7 +124,8 @@ class Grid_World:
         # check gameover
         self.check_gameover()
 
-        print(f"Action '{action}' taken at position {old_pos}. New position is '{self.player_pos}' and received a reward...")
+        if verbose:
+            print(f"Taken action '{action}'. New state is '{self.player_pos}' and received a reward...")
         return self.player_pos, reward, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
 
     def display_value_function(self, value_func: Dict[Tuple[int], float]):

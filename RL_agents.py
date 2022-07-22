@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List, Any
 
 
-class PolicyExecutorAgent:
+class PolicyExecutingAgent:
 
     def __init__(self) -> None:
         pass
@@ -16,7 +16,7 @@ class PolicyExecutorAgent:
         return self.policy[state]
 
 
-class ValueIteration(PolicyExecutorAgent):
+class ValueIterationAgent(PolicyExecutingAgent):
 
     def __init__(self,
                  states: List[Any],
