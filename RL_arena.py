@@ -30,7 +30,7 @@ def train_value_iteration():
             next_state = gw_env.get_new_state_on_action(old_state=state, action=opt_act)
             next_state_value = vi_agent.get_state_value(state=next_state)
 
-            vi_agent.set_state_value(state=state, new_value=(next_state_value + gw_env.STEP_REWARD))
+            vi_agent.set_state_value(state=state, new_value=(0.99 * next_state_value))
 
         iters += 1
         # print(f"Iteration {iters}")
@@ -40,8 +40,10 @@ def train_value_iteration():
     print(gw_env.get_board())
 
     gw_env.display_value_function(value_func=vi_agent.get_value_function())
-    gw_env.display_policy(value_func=vi_agent.get_value_function(),
-                          get_action_func=vi_agent.get_optimal_action)
+
+    vi_agent.construct_policy(gw_env.get_action_state_pairs)
+
+    gw_env.display_policy(policy=vi_agent.get_policy())
 
 
 if __name__ == "__main__":

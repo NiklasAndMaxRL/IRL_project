@@ -131,11 +131,14 @@ class Grid_World:
         print("Value function:")
         print(value_func_arr)
 
-    def display_policy(self, value_func: Dict[Tuple[int], float], get_action_func: Callable):
+    def display_policy(self, policy: Dict[Tuple[int], Tuple[int]]):
+
+        policy_str = {state: self.actions_to_str_map[action] for state, action in policy.items()}
+
         policy_arr = np.zeros((self.n_rows, self.n_cols), str)
 
-        for state in value_func:
-            policy_arr[state] = self.actions_to_str_map[get_action_func(self.get_action_state_pairs(state=state))]
+        for state in policy_str:
+            policy_arr[state] = policy_str[state]
 
         for state in self._terminal_states:
             policy_arr[state] = "-"

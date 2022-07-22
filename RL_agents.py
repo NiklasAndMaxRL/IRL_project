@@ -1,7 +1,22 @@
-from typing import Dict, List, Any
+from typing import Callable, Dict, List, Any
 
 
-class ValueIteration:
+class PolicyExecutorAgent:
+
+    def __init__(self) -> None:
+        pass
+
+    def set_policy(self, policy: Dict[Any, Any]):
+        self.policy = policy
+
+    def get_policy(self):
+        return self.policy
+
+    def select_action(self, state):
+        return self.policy[state]
+
+
+class ValueIteration(PolicyExecutorAgent):
 
     def __init__(self,
                  states: List[Any],
@@ -38,6 +53,17 @@ class ValueIteration:
 
     def set_state_value(self, state, new_value):
         self._value_function[state] = new_value
+
+    def construct_policy(self, get_action_state_pairs: Callable):
+        """Construct a policy out of the current value function. To do so, a function that takes a state and returns a Dict
+        with the action-state pairs is needed (provided by the environment."""
+        policy = {}
+
+        for state in self._value_function:
+            policy[state] = self.get_optimal_action(get_action_state_pairs(state))
+
+        self.policy = policy
+        return self.policy
 
 
 class QLearningAgent:
