@@ -1,8 +1,8 @@
-from typing import List, Tuple
+from typing import List, Dict, Tuple
 import numpy as np
 
 
-class Grid_World():
+class Grid_World:
     """Grid World in 2D with deterministic actions.
 
         # board:
@@ -16,7 +16,8 @@ class Grid_World():
 
     GOAL_REWARD = 10
     DEADLY_TRAP_REWARD = -10
-    INTERMEDIATE_GOAL_REWARD = 1
+    INT_GOAL_REWARD = 1
+    STEP_REWARD = -0.04
     WALL = -1
 
     def __init__(self,
@@ -27,7 +28,7 @@ class Grid_World():
                  intermediate_goals: List[Tuple[int]] = [],
                  goals: List[Tuple[int]] = []):
 
-        self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
         self.gameover, self.win, self.lose = False, False, False
 
         self.n_rows, self.n_cols = size
@@ -42,17 +43,35 @@ class Grid_World():
         # construct board
         self.board = np.zeros((self.n_rows, self.n_cols))
         # populate board
-        for wall in walls:
-            self.board[wall] = self.WALL
-        for trap in traps:
+        # for wall in self.walls:
+        #     self.board[wall] = self.WALL
+        for trap in self.traps:
             self.board[trap] = self.DEADLY_TRAP_REWARD
-        for int_goal in intermediate_goals:
-            self.board[int_goal] = self.INTERMEDIATE_GOAL_REWARD
-        for goal in goals:
+        for int_goal in self.int_goals:
+            self.board[int_goal] = self.INT_GOAL_REWARD
+        for goal in self.goals:
             self.board[goal] = self.GOAL_REWARD
+
+        # state space
+        self._state_space = [(i, j) for i in range(self.n_rows) for j in range(self.n_cols) if (i, j) not in self.walls]
+        # terminal states
+        self._terminal_states = self.traps + self.goals
 
     def _get_board(self):
         return self.board
+
+    def get_action_space(self):
+        return self.possible_actions
+
+    def get_state_space(self):
+        return self._state_space
+
+    def get_terminal_states(self):
+        return self._terminal_states
+
+    def get_action_state_pairs(self, state: Tuple[int]) -> Dict[Tuple[int], Tuple[int]]:
+        """Return a Dict with the possible actions and the results states at a given state"""
+        return {action: self.get_new_state_on_action(old_state=state, action=action) for action in self.possible_actions}
 
     def _get_random_action(self):
         return self.possible_actions[np.random.choice([x for x, _ in enumerate(self.possible_actions)])]  # optimize!!!
@@ -66,6 +85,23 @@ class Grid_World():
             self.lose = True
         return self.gameover, self.win, self.lose
 
+    def get_new_state_on_action(self, old_state: Tuple[int], action: Tuple[int]):
+        """Return the new state after taking action when in old_state"""
+        # calculate the new state
+        new_state = (old_state[0] + action[0], old_state[1] + action[1])
+
+        # check if the new position is out of bounds
+        if (new_state[0] < 0 or new_state[0] > self.n_rows - 1) or (new_state[1] < 0 or new_state[1] > self.n_cols - 1):
+            new_state = old_state
+        # check if there is a wall in the new positon
+        if new_state in self.walls:
+            new_state = old_state
+
+        return new_state
+
+    def get_state_reward(self, state: Tuple[int]):
+        return self.board[state]
+
     def take_action(self, action):
         if action not in self.possible_actions:
             print(f"Invalid action '{action}'. Please choose one from '{self.possible_actions}'")
@@ -74,16 +110,7 @@ class Grid_World():
         old_pos = self.player_pos
 
         # calculate the new positon
-        new_pos = (self.player_pos[0] + action[0], self.player_pos[1] + action[1])
-
-        # check if the new position is out of bounds
-        if (new_pos[0] < 0 or new_pos[0] > self.n_rows - 1) or (new_pos[1] < 0 or new_pos[1] > self.n_cols - 1):
-            new_pos = old_pos
-        # check if there is a wall in the new positon
-        if new_pos in self.walls:
-            new_pos = old_pos
-        # new position is valid, therefore store it
-        self.player_pos = new_pos
+        self.player_pos = self.get_new_state_on_action(old_state=self.player_pos, action=action)
 
         # collect reward in new position
         reward = self.board[self.player_pos]
