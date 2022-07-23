@@ -28,7 +28,8 @@ class ValueIterationAgent(PolicyExecutingAgent):
         # initialise value function randomly
         self._value_function = {state: .0 for state in states}
         # set value of terminal states to 0
-        for terminal in terminal_states:
+        self._terminal_states = terminal_states
+        for terminal in self._terminal_states:
             self._value_function[terminal] = .0
 
         self.actions = actions
@@ -58,10 +59,11 @@ class ValueIterationAgent(PolicyExecutingAgent):
         """Construct a policy out of the current value function. To do so, a function that takes a state and returns a Dict
         with the action-state pairs is needed (provided by the environment."""
         policy = {}
-
         for state in self._value_function:
-            policy[state] = self.get_optimal_action(get_action_state_pairs(state))
-
+            if state in self._terminal_states:
+                policy[state] = None
+            else:
+                policy[state] = self.get_optimal_action(get_action_state_pairs(state))
         self.policy = policy
         return self.policy
 
