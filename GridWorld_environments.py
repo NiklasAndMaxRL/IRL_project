@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import Any, List, Dict, Tuple
 import numpy as np
 
 
@@ -29,7 +29,7 @@ class Grid_World:
                  goals: List[Tuple[int]] = []):
 
         self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
-        self.actions_to_str_map = {(1, 0): "S", (0, 1): "E", (-1, 0): "N", (0, -1): "W"}
+        self.actions_to_str_map = {(1, 0): "S", (0, 1): "E", (-1, 0): "N", (0, -1): "W", None: "-"}
         self.gameover, self.win, self.lose = False, False, False
 
         self.n_rows, self.n_cols = size
@@ -76,6 +76,15 @@ class Grid_World:
 
     def _get_random_action(self):
         return self.possible_actions[np.random.choice([x for x, _ in enumerate(self.possible_actions)])]  # optimize!!!
+
+    def construct_random_policy(self):
+        policy = {}
+        for state in self._state_space:
+            if state in self._terminal_states:
+                policy[state] = None
+            else:
+                policy[state] = self._get_random_action()
+        return policy
 
     def reset_env(self, state):
         if state in self._state_space:
@@ -127,6 +136,26 @@ class Grid_World:
         if verbose:
             print(f"Taken action '{action}'. New state is '{self.player_pos}' and received a reward...")
         return self.player_pos, reward, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
+
+    def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int):
+        trajs = []
+        state_space = [state for state in self.get_state_space() if state not in self.get_terminal_states()]
+
+        for _ in range(n_traj):
+            initial_state = state_space[np.random.choice(range(len(state_space)))]
+            traj = [initial_state]
+            self.reset_env(state=initial_state)
+
+            for _ in range(max_traj_length):
+                action = policy[self.player_pos]
+                self.take_action(action=action)
+                traj.append(self.player_pos)
+                if self.gameover:
+                    break
+            # print(traj)
+            trajs.append(traj)
+
+        return trajs
 
     def display_value_function(self, value_func: Dict[Tuple[int], float]):
         value_func_arr = np.zeros((self.n_rows, self.n_cols))

@@ -6,8 +6,8 @@ from GridWorld_environments import Grid_World
 from RL_agents import ValueIterationAgent
 
 GAMMA = 0.95
-
 VALUE_ITERATION_TRAINING_N = 50
+MAXIMUM_TRAJECTORY_LENGTH = 30
 
 GW_SIZE = (4, 4)
 GW_TRAPS = [(2, 3), (1, 2)]
@@ -56,7 +56,7 @@ def train_value_iteration(gw_env: Grid_World):
     return vi_agent.get_policy()
 
 
-def generate_trajectories(env: Grid_World, policy: Dict[Any, Any], n_traj: int, max_traj_length: int = 30):
+def generate_trajectories(env: Grid_World, policy: Dict[Any, Any], n_traj: int, max_traj_length: int = MAXIMUM_TRAJECTORY_LENGTH):
 
     trajs = []
     state_space = env.get_state_space()
