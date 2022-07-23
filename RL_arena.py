@@ -1,12 +1,15 @@
 import argparse
-from typing import Dict, Any
+from typing import Dict, Any, List
 import numpy as np
 
 from GridWorld_environments import Grid_World
 from RL_agents import ValueIterationAgent
+from IRL_agents import IRL_from_sampled_trajectories
 
 GAMMA = 0.95
 VALUE_ITERATION_TRAINING_N = 50
+
+NUMBER_OF_TRAJECTORIES = 100
 MAXIMUM_TRAJECTORY_LENGTH = 30
 
 GW_SIZE = (4, 4)
@@ -15,8 +18,6 @@ GW_GOALS = [(3, 3)]
 
 
 def train_value_iteration(gw_env: Grid_World):
-    print("Training RL with Value Iteration...")
-
     vi_agent = ValueIterationAgent(states=gw_env.get_state_space(),
                                    terminal_states=gw_env.get_terminal_states(),
                                    actions=gw_env.get_action_space())
@@ -56,29 +57,29 @@ def train_value_iteration(gw_env: Grid_World):
     return vi_agent.get_policy()
 
 
-def generate_trajectories(env: Grid_World, policy: Dict[Any, Any], n_traj: int, max_traj_length: int = MAXIMUM_TRAJECTORY_LENGTH):
+def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]):
 
-    trajs = []
-    state_space = env.get_state_space()
+    irl_agent = IRL_from_sampled_trajectories(d=GW_SIZE,
+                                              env_ranges=((0, GW_SIZE[0]), (0, GW_SIZE[1])),
+                                              env_discrete_size=GW_SIZE,
+                                              gamma=GAMMA)
 
-    for i in range(n_traj):
+    # step 2: given optimal trajectories, compute the value estimate
+    optimal_value_estimate = irl_agent.compute_value_estimate(trajs=optimal_trajectories)
 
-        initial_state = state_space[np.random.choice(range(len(state_space)))]
-        traj = [initial_state]
-        env.reset_env(state=initial_state)
+    # step 3: generate trajectories and compute the value estimate for a random policy
+    candidate_policies = [env.construct_random_policy()]
+    random_trajectories = env.generate_trajectories(policy=candidate_policies[0],
+                                                    n_traj=NUMBER_OF_TRAJECTORIES,
+                                                    max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
+    random_value_estimate = irl_agent.compute_value_estimate(trajs=random_trajectories)
 
-        for _ in range(max_traj_length):
+    # step 4:
+    alphas = irl_agent.solve_lp(optimal_value_estimate, [random_value_estimate])
 
-            action = policy[env.player_pos]
-            env.take_action(action=action)
-            traj.append(env.player_pos)
-            if env.gameover:
-                break
+    print(alphas)
 
-        print(traj)
-        trajs.append(traj)
-
-    return trajs
+    pass
 
 
 if __name__ == "__main__":
@@ -87,6 +88,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-vi", "--value-iteration", required=False, default=False, action="store_true")
     parser.add_argument("-gt", "--generate-trajectories", type=int, required=False, default=0)
+    parser.add_argument("-irl", "--inverse-rl", required=False, default=False, action="store_true")
 
     args = parser.parse_args()
     print(f"Passed args: {args}")
@@ -101,7 +103,13 @@ if __name__ == "__main__":
         greepy_policy = {}
 
     if args.generate_trajectories:
-        print("Generating trajectories...")
-        trajectories = generate_trajectories(env=environment, policy=greepy_policy, n_traj=args.generate_trajectories)
+        print(f"Generating {NUMBER_OF_TRAJECTORIES} trajectories...")
+        trajectories = environment.generate_trajectories(policy=greepy_policy,
+                                                         n_traj=NUMBER_OF_TRAJECTORIES,
+                                                         max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
 
-    print("Closing the RL_arena...")
+    if args.inverse_rl:
+        print("IRL from samples...")
+        estimated_reward = irl_reward_estimation(env=environment, optimal_trajectories=trajectories)
+
+    print("Closing up the arena...")
