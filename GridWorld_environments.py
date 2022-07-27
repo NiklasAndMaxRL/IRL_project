@@ -29,7 +29,7 @@ class Grid_World:
                  goals: List[Tuple[int]] = []):
 
         self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
-        self.actions_to_str_map = {(1, 0): "S", (0, 1): "E", (-1, 0): "N", (0, -1): "W", None: "-"}
+        self.actions_to_str_map = {(1, 0): "v", (0, 1): ">", (-1, 0): "^", (0, -1): "<", None: "-"}
         self.gameover, self.win, self.lose = False, False, False
 
         self.n_rows, self.n_cols = size
@@ -61,6 +61,19 @@ class Grid_World:
     def get_board(self):
         return self.board
 
+    def set_board(self, new_board):
+        self.board = new_board
+
+    def get_state_reward(self, state: Tuple[int]):
+        return self.board[state]
+
+    def set_reward_func(self, new_reward_func):
+        for state in self._state_space:
+            self.board[state] = new_reward_func[state]
+
+    def get_reward_func(self):
+        return {state: self.board[state] for state in self._state_space}
+
     def get_action_space(self):
         return self.possible_actions
 
@@ -81,7 +94,7 @@ class Grid_World:
         policy = {}
         for state in self._state_space:
             if state in self._terminal_states:
-                policy[state] = None
+                policy[state] = self.possible_actions[0]  # for consistency, on termial states we take the first action in the list. This is arbitrary but necessary
             else:
                 policy[state] = self._get_random_action()
         return policy
@@ -90,16 +103,15 @@ class Grid_World:
         if state in self._state_space:
             self.gameover, self.win, self.lose = False, False, False
             self.player_pos = state
+            self.check_gameover()
         else:
             raise ValueError(f"Invalid state '{state}' passed to reset_env()")
 
     def check_gameover(self):
         if self.player_pos in self.traps:
-            self.gameover = True
-            self.win = False
+            self.gameover, self.win, self.lose = True, False, True
         if self.player_pos in self.goals:
-            self.gameover = True
-            self.lose = True
+            self.gameover, self.win, self.lose = True, True, False
         return self.gameover, self.win, self.lose
 
     def get_new_state_on_action(self, old_state: Tuple[int], action: Tuple[int]):
@@ -116,9 +128,6 @@ class Grid_World:
 
         return new_state
 
-    def get_state_reward(self, state: Tuple[int]):
-        return self.board[state]
-
     def take_action(self, action, verbose=False):
         if action not in self.possible_actions:
             print(f"Invalid action '{action}'. Please choose one from '{self.possible_actions}'")
@@ -126,10 +135,8 @@ class Grid_World:
 
         # calculate the new positon
         self.player_pos = self.get_new_state_on_action(old_state=self.player_pos, action=action)
-
         # collect reward in new position
         reward = self.board[self.player_pos]
-
         # check gameover
         self.check_gameover()
 
@@ -139,22 +146,23 @@ class Grid_World:
 
     def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int):
         trajs = []
-        state_space = [state for state in self.get_state_space() if state not in self.get_terminal_states()]
+        # state_space = [state for state in self.get_state_space() if state not in self.get_terminal_states()]
 
         for _ in range(n_traj):
-            initial_state = state_space[np.random.choice(range(len(state_space)))]
-            traj = [initial_state]
+            initial_state = self._state_space[np.random.choice(range(len(self._state_space)))]
             self.reset_env(state=initial_state)
+            traj = [initial_state]
 
             for _ in range(max_traj_length):
+                if self.gameover:  # check for gameover first, in case the initial state is already terminal
+                    break
                 action = policy[self.player_pos]
                 self.take_action(action=action)
                 traj.append(self.player_pos)
-                if self.gameover:
-                    break
             # print(traj)
             trajs.append(traj)
 
+        self.reset_env(state=self._state_space[0])
         return trajs
 
     def display_value_function(self, value_func: Dict[Tuple[int], float]):
@@ -175,8 +183,8 @@ class Grid_World:
         for state in policy_str:
             policy_arr[state] = policy_str[state]
 
-        for state in self._terminal_states:
-            policy_arr[state] = "-"
+        # for state in self._terminal_states:
+        #     policy_arr[state] = "-"
 
         print("Policy:")
         print(policy_arr)
