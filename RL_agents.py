@@ -1,4 +1,5 @@
 from typing import Callable, Dict, List, Any
+import numpy as np
 
 
 class PolicyExecutingAgent:
@@ -105,22 +106,29 @@ class QLearningAgent:
         return self._Q_function
 
     def get_optimal_action(self, action_state_pairs: Dict[Any, Any]) -> Any:
-        """Return the optimal action from a Dict with actions-state pairs"""
-        state_values = [self._reward_func[state] + self.gamma * self._value_function[state] for state in action_state_pairs.values()]
-        
-        for state in action_state_pairs:
-            self.get_Q_function()[state]
+        """Return the optimal action from a Dict with actions-state pairs"""        
+        q_values = []
 
-        self.Q[state_idx, action_idx] + self.learning_rate * (self.R['win'] + self.discount * np.max(self.Q[next_state_idx, :]) - self.Q[state_idx, action_idx] )
+        optimal_value = 0
+        optimal_idx = 0
+        for idx, action in enumerate(action_state_pairs.keys()):
+            state = action_state_pairs.values()[idx]
+            q_value = self.get_Q_function()[state][action]
+            q_value = q_value + self.learning_rate * (self._reward_func[state] + self.gamma * np.max(self.get_Q_function()[state].values()) - q_value )
+            q_values.append(q_value)
+            self.set_state_action_value(state, action, q_value)
+            if ( optimal_value < q_value ):
+                optimal_value = q_value
+                optimal_idx = idx
 
         # Check https://www.geeksforgeeks.org/python-get-key-with-maximum-value-in-dictionary/ to understand the one-liner
-        return max(zip(state_values, action_state_pairs.keys()))[1]
+        return max(zip(q_values, action_state_pairs.keys()))[1]
 
-    def get_state_action_value(self, state) -> float:
-        return self._Q_function[state]
+    def get_state_action_value(self, state, action) -> float:
+        return self._Q_function[state][action]
 
-    def set_state_action_value(self, state, new_value):
-        self._Q_function[state] = new_value
+    def set_state_action_value(self, state, action, new_value):
+        self._Q_function[state][action] = new_value
 
     def construct_policy(self, get_action_state_pairs: Callable):
         """Construct a policy out of the current value function. To do so, a function that takes a state and returns a Dict
