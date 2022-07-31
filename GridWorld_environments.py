@@ -165,6 +165,16 @@ class Grid_World:
         self.reset_env(state=self._state_space[0])
         return trajs
 
+    def display_q_function(self, q_func: Dict[Tuple[int], float]):
+        q_func_arr = np.zeros((self.n_rows, self.n_cols, len(self.possible_actions)))
+
+        for state in q_func:
+            for act_idx, action in enumerate(self.possible_actions):
+                q_func_arr[state[0], state[1], act_idx] = q_func[state][action]
+
+        print("Q function:")
+        print(q_func_arr)
+
     def display_value_function(self, value_func: Dict[Tuple[int], float]):
         value_func_arr = np.zeros((self.n_rows, self.n_cols))
 

@@ -74,6 +74,21 @@ class IRL_from_sampled_trajectories:
 
         return value_estimates
 
+    def compute_action_value_estimate(self, trajs: List[List[Any]]) -> List[float]:
+        """Given a List of trajectories, return a List with the value estimates for each approximating function."""
+        action_value_estimates = []
+        for approx_center in self.d_centers:
+            temp_value = 0
+
+            for traj in trajs:
+                for i, state in enumerate(traj):
+                    temp_value += self.gamma**i * self._approx_func(x=state, center=approx_center)
+
+            temp_value /= len(trajs)
+            action_value_estimates.append(temp_value)
+
+        return action_value_estimates
+
     def solve_lp(self, target_estimate, candidate_estimates):
         """Solve the Linear programing task at hand:
         Maximize: sum over i of p(V_target - V_candidate_i) s.t. |alpha_i| <= 1

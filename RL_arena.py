@@ -2,11 +2,11 @@ import argparse
 from typing import Any, List
 
 from GridWorld_environments import Grid_World
-from RL_agents import ValueIterationAgent
+from RL_agents import ValueIterationAgent, QLearningAgent
 from IRL_agents import IRL_from_sampled_trajectories
 
 GAMMA = 0.95
-VALUE_ITERATION_TRAINING_N = 50
+VALUE_ITERATION_TRAINING_N = 500
 
 NUMBER_OF_TRAJECTORIES = 50
 MAXIMUM_TRAJECTORY_LENGTH = 50
@@ -58,6 +58,49 @@ def train_value_iteration(gw_env: Grid_World):
     return vi_agent.get_policy()
 
 
+def train_q_learning(gw_env: Grid_World):
+    ql_agent = QLearningAgent(states=gw_env.get_state_space(),
+                                   terminal_states=gw_env.get_terminal_states(),
+                                   reward_function=gw_env.get_reward_func(),
+                                   actions=gw_env.get_action_space(),
+                                   gamma=GAMMA)
+
+    # for trap in gw_env.traps:
+    #     vi_agent.set_state_value(state=trap, new_value=gw_env.DEADLY_TRAP_REWARD)
+    # for goal in gw_env.goals:
+    #     vi_agent.set_state_value(state=goal, new_value=gw_env.GOAL_REWARD)
+
+    iters = 0
+    while iters < VALUE_ITERATION_TRAINING_N and not ql_agent.converged:
+
+        for state in gw_env.get_state_space():
+
+            if state in gw_env.get_terminal_states():
+                continue
+
+            opt_act = ql_agent.get_optimal_action(state, action_state_pairs=gw_env.get_action_state_pairs(state=state))
+            next_state = gw_env.get_new_state_on_action(old_state=state, action=opt_act)
+            next_q_value = ql_agent.get_state_action_value(state=next_state, action=opt_act)
+
+            ql_agent.set_state_action_value(state=state, action=opt_act, new_value=(gw_env.get_state_reward(state=next_state) + GAMMA * next_q_value))
+
+        iters += 1
+        # print(f"Iteration {iters}")
+        # print(vi_agent.get_value_function())
+
+    print("Board:")
+    print(gw_env.get_board())
+
+    gw_env.display_q_function(q_func=ql_agent.get_Q_function())
+
+    ql_agent.construct_policy(gw_env.get_action_state_pairs)
+
+    gw_env.display_policy(policy=ql_agent.get_policy())
+
+    return ql_agent.get_policy()
+
+
+
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]):
 
     irl_agent = IRL_from_sampled_trajectories(d=(20, 20),
@@ -103,6 +146,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-vi", "--value-iteration", required=False, default=False, action="store_true")
+    parser.add_argument("-ql", "--q-learning", required=False, default=False, action="store_true")
     parser.add_argument("-gt", "--generate-trajectories", required=False, default=False, action="store_true")
     parser.add_argument("-irl", "--inverse-rl", required=False, default=False, action="store_true")
 
@@ -113,14 +157,17 @@ if __name__ == "__main__":
 
     if args.value_iteration:
         print("Training via value iteration...")
-        greepy_policy = train_value_iteration(gw_env=environment)
+        greedy_policy = train_value_iteration(gw_env=environment)
+    elif args.q_learning:
+        print("Training via q-learning...")
+        greedy_policy = train_q_learning(gw_env=environment)        
     else:
         # load from file (?)
-        greepy_policy = {}
+        greedy_policy = {}
 
     if args.generate_trajectories:
         print(f"Generating {NUMBER_OF_TRAJECTORIES} trajectories...")
-        trajectories = environment.generate_trajectories(policy=greepy_policy,
+        trajectories = environment.generate_trajectories(policy=greedy_policy,
                                                          n_traj=NUMBER_OF_TRAJECTORIES,
                                                          max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
 
