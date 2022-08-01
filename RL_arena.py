@@ -5,8 +5,14 @@ from GridWorld_environments import Grid_World
 from RL_agents import ValueIterationAgent, QLearningAgent
 from IRL_agents import IRL_from_sampled_trajectories
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+from copy import deepcopy
+
 GAMMA = 0.95
 VALUE_ITERATION_TRAINING_N = 500
+IRL_TRAINING_N = 20
 
 NUMBER_OF_TRAJECTORIES = 50
 MAXIMUM_TRAJECTORY_LENGTH = 50
@@ -103,6 +109,10 @@ def train_q_learning(gw_env: Grid_World):
 
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]):
 
+    reward_func_ref = deepcopy(env.get_board())
+    reward_func_preds = []
+    print('reward_func_ref', reward_func_ref)
+
     irl_agent = IRL_from_sampled_trajectories(d=(20, 20),
                                               env_ranges=((0, GW_SIZE[0]), (0, GW_SIZE[1])),
                                               env_discrete_size=GW_SIZE,
@@ -118,7 +128,7 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
     candidate_value_estimates = []
 
     # while True:
-    for i in range(100):
+    for i in range(IRL_TRAINING_N):
         candidate_trajectories = env.generate_trajectories(policy=candidate_policies[-1],
                                                            n_traj=NUMBER_OF_TRAJECTORIES,
                                                            max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
@@ -129,9 +139,13 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
         # step 5: construct new reward function from the alphas
         reward_func = irl_agent.construct_reward_function(alphas=irl_agent.get_alphas())
+        
 
         # step 6: find optimal policy under new reward function and add to 'candidate_policies' list
         env.set_reward_func(reward_func)
+        reward_func_preds.append(deepcopy(env.get_board()))
+        print('reward_func\n', env.get_board())
+        
         candidate_policies.append(train_value_iteration(gw_env=env))
 
         print(f"Iteration {i}...")
@@ -140,6 +154,19 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         env.display_policy(policy=candidate_policies[-1])
         print("============================================================\n" * 2)
 
+    print('reward_func_pred \n', [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]) #[np.array(one_candidate_value_estimates).flatten().shape for one_candidate_value_estimates in candidate_value_estimates ] )
+    print('reward_func_ref \n', np.array(reward_func_ref).flatten())
+    vec1 = [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]
+    vec2 = np.array(reward_func_ref).flatten()
+    print('l2-loss', np.linalg.norm(vec1[0] - vec2))
+    reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
+
+    value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
+    plt.plot(reward_loss)
+    plt.show()
+
+def calc_value_distance(value_estimates_ref, value_estimates_pred):
+    return np.linalg.norm(np.array(value_estimates_ref)-np.array(value_estimates_pred))
 
 if __name__ == "__main__":
 
