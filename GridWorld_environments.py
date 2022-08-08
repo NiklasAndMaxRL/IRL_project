@@ -26,7 +26,8 @@ class Grid_World:
                  walls: List[Tuple[int]] = [],
                  traps: List[Tuple[int]] = [],
                  intermediate_goals: List[Tuple[int]] = [],
-                 goals: List[Tuple[int]] = []):
+                 goals: List[Tuple[int]] = [],
+                 randomize_board: bool = False):
 
         self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
         self.actions_to_str_map = {(1, 0): "v", (0, 1): ">", (-1, 0): "^", (0, -1): "<", None: "-"}
@@ -36,10 +37,30 @@ class Grid_World:
         self.player_pos = start
 
         # store lists of objects
-        self.walls = walls
-        self.traps = traps
-        self.int_goals = intermediate_goals
-        self.goals = goals
+        if randomize_board:
+            #get random walls - 1/20th of total fields will be walls
+            self.walls = []
+            #for _ in range(int((size[0] * size[1]) / 20)):
+            #    self.walls.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
+            
+            #get random traps - 1/30th of total fields will be traps
+            self.traps = []
+            for _ in range(int((size[0] * size[1]) / 30)):
+                self.traps.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
+            
+            #get random intermediate goals
+            self.int_goals = []
+            #for _ in range(int((size[0] * size[1]) / 30)):
+            #    self.int_goals.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
+            
+            #get random goal -- for now just one goal
+            self.goals = []
+            self.goals.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
+        else:
+            self.walls = walls
+            self.traps = traps
+            self.int_goals = intermediate_goals
+            self.goals = goals
 
         # construct board
         self.board = np.zeros((self.n_rows, self.n_cols))
