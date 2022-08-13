@@ -4,14 +4,6 @@ import numpy as np
 
 class Grid_World:
     """Grid World in 2D with deterministic actions.
-
-        # board:
-        # 0 is empty
-        # -1 is wall
-        # -10 is trap
-        # +1 is intermediate_goal
-        # +10 is goal
-        # #2 is player
     """
 
     GOAL_REWARD = 10
@@ -65,8 +57,6 @@ class Grid_World:
         # construct board
         self.board = np.zeros((self.n_rows, self.n_cols))
         # populate board
-        # for wall in self.walls:
-        #     self.board[wall] = self.WALL
         for trap in self.traps:
             self.board[trap] = self.DEADLY_TRAP_REWARD
         for int_goal in self.int_goals:
@@ -167,8 +157,6 @@ class Grid_World:
 
     def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int):
         trajs = []
-        # state_space = [state for state in self.get_state_space() if state not in self.get_terminal_states()]
-
         for _ in range(n_traj):
             initial_state = self._state_space[np.random.choice(range(len(self._state_space)))]
             self.reset_env(state=initial_state)
@@ -180,7 +168,6 @@ class Grid_World:
                 action = policy[self.player_pos]
                 self.take_action(action=action)
                 traj.append(self.player_pos)
-            # print(traj)
             trajs.append(traj)
 
         self.reset_env(state=self._state_space[0])
@@ -213,9 +200,6 @@ class Grid_World:
 
         for state in policy_str:
             policy_arr[state] = policy_str[state]
-
-        # for state in self._terminal_states:
-        #     policy_arr[state] = "-"
 
         print("Policy:")
         print(policy_arr)
