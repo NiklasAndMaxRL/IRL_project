@@ -19,8 +19,8 @@ IRL_TRAINING_N = 10
 NUMBER_OF_TRAJECTORIES = 10
 MAXIMUM_TRAJECTORY_LENGTH = 50
 
-#GW_SIZE = (5, 5)
-GW_SIZES = [(10,10), (100,100), (1000,1000)]#[(x, x) for x in np.arange(5,11, 5)]
+# GW_SIZE = (5, 5)
+GW_SIZES = [(5, 5), (10, 10), (20, 20)]  # [(x, x) for x in np.arange(5,11, 5)]
 GW_TRAPS = []
 GW_GOALS = [(0, 4)]
 
@@ -31,11 +31,6 @@ def train_value_iteration(gw_env: Grid_World):
                                    reward_function=gw_env.get_reward_func(),
                                    actions=gw_env.get_action_space(),
                                    gamma=GAMMA)
-
-    # for trap in gw_env.traps:
-    #     vi_agent.set_state_value(state=trap, new_value=gw_env.DEADLY_TRAP_REWARD)
-    # for goal in gw_env.goals:
-    #     vi_agent.set_state_value(state=goal, new_value=gw_env.GOAL_REWARD)
 
     iters = 0
     while iters < VALUE_ITERATION_TRAINING_N and not vi_agent.converged:
@@ -55,8 +50,8 @@ def train_value_iteration(gw_env: Grid_World):
         # print(f"Iteration {iters}")
         # print(vi_agent.get_value_function())
 
-    #print("Board:")
-    #print(gw_env.get_board())
+    # print("Board:")
+    # print(gw_env.get_board())
 
     gw_env.display_value_function(value_func=vi_agent.get_value_function())
 
@@ -69,15 +64,10 @@ def train_value_iteration(gw_env: Grid_World):
 
 def train_q_learning(gw_env: Grid_World):
     ql_agent = QLearningAgent(states=gw_env.get_state_space(),
-                                   terminal_states=gw_env.get_terminal_states(),
-                                   reward_function=gw_env.get_reward_func(),
-                                   actions=gw_env.get_action_space(),
-                                   gamma=GAMMA)
-
-    # for trap in gw_env.traps:
-    #     vi_agent.set_state_value(state=trap, new_value=gw_env.DEADLY_TRAP_REWARD)
-    # for goal in gw_env.goals:
-    #     vi_agent.set_state_value(state=goal, new_value=gw_env.GOAL_REWARD)
+                              terminal_states=gw_env.get_terminal_states(),
+                              reward_function=gw_env.get_reward_func(),
+                              actions=gw_env.get_action_space(),
+                              gamma=GAMMA)
 
     iters = 0
     while iters < VALUE_ITERATION_TRAINING_N and not ql_agent.converged:
@@ -97,8 +87,8 @@ def train_q_learning(gw_env: Grid_World):
         # print(f"Iteration {iters}")
         # print(vi_agent.get_value_function())
 
-    #print("Board:")
-    #print(gw_env.get_board())
+    # print("Board:")
+    # print(gw_env.get_board())
 
     gw_env.display_q_function(q_func=ql_agent.get_Q_function())
 
@@ -109,24 +99,35 @@ def train_q_learning(gw_env: Grid_World):
     return ql_agent.get_policy()
 
 
-
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]], train_func: Callable):
 
+<<<<<<< HEAD
 
     np_normalize = lambda x, norm: x/np.linalg.norm(x, ord=norm)
+=======
+    np_normalize = lambda x: x / np.linalg.norm(x)
+>>>>>>> 187cbc6f014a660bf4744d95a7820bf3cc2e9684
 
     reward_func_ref = deepcopy(env.get_board())
     reward_func_preds = []
     print('reward_func_ref', reward_func_ref)
 
+<<<<<<< HEAD
     minmax_scaler = MinMaxScaler()
     reward_func_ref = np_normalize(reward_func_ref, 'fro')
     print('reward_func_ref_norm \n', reward_func_ref)
 
     #reward_func_ref = minmax_scaler.fit_transform(reward_func_ref)
     #print('minmax_scaler.fit_transform(reward_func_ref)', minmax_scaler.fit_transform(reward_func_ref))
+=======
+    # minmax_scaler = MinMaxScaler()
+    reward_func_ref = np_normalize(reward_func_ref)
+    print('reward_func_ref_norm \n', reward_func_ref)
+    # reward_func_ref = minmax_scaler.fit_transform(reward_func_ref)
+    # print('minmax_scaler.fit_transform(reward_func_ref)', minmax_scaler.fit_transform(reward_func_ref))
+>>>>>>> 187cbc6f014a660bf4744d95a7820bf3cc2e9684
 
-    irl_agent = IRL_from_sampled_trajectories(d=(20, 20),
+    irl_agent = IRL_from_sampled_trajectories(d=(GW_SIZE[0] * 4, GW_SIZE[1] * 4),
                                               env_ranges=((0, GW_SIZE[0]), (0, GW_SIZE[1])),
                                               env_discrete_size=GW_SIZE,
                                               penalty_factor=2,
@@ -152,19 +153,18 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
         # step 5: construct new reward function from the alphas
         reward_func = irl_agent.construct_reward_function(alphas=irl_agent.get_alphas())
-        
 
         # step 6: find optimal policy under new reward function and add to 'candidate_policies' list
         env.set_reward_func(reward_func)
-        minmax_scaler = MinMaxScaler()
+        # minmax_scaler = MinMaxScaler()
         print('env.get_board \n', env.get_board())
         reward_func_preds.append(np_normalize(abs(deepcopy(env.get_board()))))
-        #print('reward_func_preds[-1] \n', reward_func_preds[-1])
-        #reward_func_preds.append(minmax_scaler.fit_transform(deepcopy(env.get_board())))
+        # print('reward_func_preds[-1] \n', reward_func_preds[-1])
+        # reward_func_preds.append(minmax_scaler.fit_transform(deepcopy(env.get_board())))
         print('reward_func_preds \n', reward_func_preds)
 
-        #TODO Niklas: replace train_value_iteration by train_q_function -> argument
-        candidate_policies.append(train_func(gw_env=env)) #train_value_iteration(gw_env=env))
+        # TODO Niklas: replace train_value_iteration by train_q_function -> argument
+        candidate_policies.append(train_func(gw_env=env))  # train_value_iteration(gw_env=env))
 
         print(f"Iteration {i}...")
         # print(f"Alphas ({len(irl_agent.get_alphas())}):\n", np.array(irl_agent.get_alphas()).reshape(GW_SIZE))
@@ -172,22 +172,28 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         env.display_policy(policy=candidate_policies[-1])
         print("============================================================\n" * 2)
 
-    #print('reward_func_pred \n', [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]) #[np.array(one_candidate_value_estimates).flatten().shape for one_candidate_value_estimates in candidate_value_estimates ] )
-    #print('reward_func_ref \n', np.array(reward_func_ref).flatten())
-    #vec1 = [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]
-    #vec2 = np.array(reward_func_ref).flatten()
-    #print('l2-loss', np.linalg.norm(vec1[0] - vec2))
+    # print('reward_func_pred \n', [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]) #[np.array(one_candidate_value_estimates).flatten().shape for one_candidate_value_estimates in candidate_value_estimates ] )
+    # print('reward_func_ref \n', np.array(reward_func_ref).flatten())
+    # vec1 = [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]
+    # vec2 = np.array(reward_func_ref).flatten()
+    # print('l2-loss', np.linalg.norm(vec1[0] - vec2))
     reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
 
     value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
-    policy_loss = 1
+<<<<<<< HEAD
     #plt.plot(reward_loss)
     #plt.show()
+=======
+    # plt.plot(reward_loss)
+    # plt.show()
+>>>>>>> 187cbc6f014a660bf4744d95a7820bf3cc2e9684
 
     return {'reference_reward_func': reward_func_ref, 'policy_pred': candidate_policies, 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
 
+
 def calc_value_distance(value_estimates_ref, value_estimates_pred):
-    return np.linalg.norm(np.array(value_estimates_ref)-np.array(value_estimates_pred))
+    return np.linalg.norm(np.array(value_estimates_ref) - np.array(value_estimates_pred))
+
 
 if __name__ == "__main__":
 
@@ -209,8 +215,6 @@ if __name__ == "__main__":
     for GW_SIZE in GW_SIZES:
         environment = Grid_World(size=GW_SIZE, traps=GW_TRAPS, goals=GW_GOALS, randomize_board=True)
 
-        
-
         train_func = train_value_iteration
 
         if args.value_iteration:
@@ -218,7 +222,7 @@ if __name__ == "__main__":
             greedy_policy = train_value_iteration(gw_env=environment)
         elif args.q_learning:
             print("Training via q-learning...")
-            greedy_policy = train_q_learning(gw_env=environment)       
+            greedy_policy = train_q_learning(gw_env=environment)
             train_func = train_q_learning
         else:
             # load from file (?)
@@ -227,8 +231,8 @@ if __name__ == "__main__":
         if args.generate_trajectories:
             print(f"Generating {NUMBER_OF_TRAJECTORIES} trajectories...")
             trajectories = environment.generate_trajectories(policy=greedy_policy,
-                                                            n_traj=NUMBER_OF_TRAJECTORIES,
-                                                            max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
+                                                             n_traj=NUMBER_OF_TRAJECTORIES,
+                                                             max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
 
         if args.inverse_rl:
             print("IRL from samples...")
