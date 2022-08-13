@@ -113,15 +113,16 @@ def train_q_learning(gw_env: Grid_World):
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]], train_func: Callable):
 
 
-    np_normalize = lambda x: x/np.linalg.norm(x)
+    np_normalize = lambda x, norm: x/np.linalg.norm(x, ord=norm)
 
     reward_func_ref = deepcopy(env.get_board())
     reward_func_preds = []
     print('reward_func_ref', reward_func_ref)
 
     minmax_scaler = MinMaxScaler()
-    reward_func_ref = np_normalize(reward_func_ref)
+    reward_func_ref = np_normalize(reward_func_ref, 'fro')
     print('reward_func_ref_norm \n', reward_func_ref)
+
     #reward_func_ref = minmax_scaler.fit_transform(reward_func_ref)
     #print('minmax_scaler.fit_transform(reward_func_ref)', minmax_scaler.fit_transform(reward_func_ref))
 
@@ -179,10 +180,11 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
     reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
 
     value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
+    policy_loss = 1
     #plt.plot(reward_loss)
     #plt.show()
 
-    return {'reference_reward_func': reward_func_ref, 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
+    return {'reference_reward_func': reward_func_ref, 'policy_pred': candidate_policies, 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
 
 def calc_value_distance(value_estimates_ref, value_estimates_pred):
     return np.linalg.norm(np.array(value_estimates_ref)-np.array(value_estimates_pred))
