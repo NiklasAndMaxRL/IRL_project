@@ -6,9 +6,9 @@ class Grid_World:
     """Grid World in 2D with deterministic actions.
     """
 
-    GOAL_REWARD = 10
-    DEADLY_TRAP_REWARD = -10
-    INT_GOAL_REWARD = 1
+    GOAL_REWARD = 1
+    DEADLY_TRAP_REWARD = -1
+    INT_GOAL_REWARD = 0.2
     STEP_REWARD = -0.04
     WALL = -1
 
@@ -28,26 +28,41 @@ class Grid_World:
         self.n_rows, self.n_cols = size
         self.player_pos = start
 
-        # store lists of objects
+        # generate random objects or store passed lists of objects
         if randomize_board:
-            #get random walls - 1/20th of total fields will be walls
+            N_total = self.n_rows * self.n_cols
+
+            # get random walls - 5% of total fields will be walls
             self.walls = []
-            #for _ in range(int((size[0] * size[1]) / 20)):
-            #    self.walls.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
-            
-            #get random traps - 1/30th of total fields will be traps
+            for _ in range(int(N_total * 0.05)):
+                candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                while candidate in self.walls:
+                    candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                self.walls.append(candidate)
+
+            # get random traps - 5% of total fields will be traps
             self.traps = []
-            for _ in range(int((size[0] * size[1]) / 30)):
-                self.traps.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
-            
-            #get random intermediate goals
+            for _ in range(int(N_total * 0.05)):
+                candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                while candidate in (self.walls + self.traps):
+                    candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                self.traps.append(candidate)
+
+            # get random intermediate goals - 2.5% of total fields will be traps
             self.int_goals = []
-            #for _ in range(int((size[0] * size[1]) / 30)):
-            #    self.int_goals.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
-            
-            #get random goal -- for now just one goal
+            for _ in range(int(N_total * 0.025)):
+                candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                while candidate in (self.walls + self.traps + self.int_goals):
+                    candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                self.int_goals.append(candidate)
+
+            # get random goals - for now just one goal
             self.goals = []
-            self.goals.append((np.random.choice(range(size[0])), np.random.choice(range(size[1]))))
+            for _ in [1]:
+                candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                while candidate in (self.walls + self.traps + self.int_goals + self.goals):
+                    candidate = (np.random.choice(self.n_rows), np.random.choice(self.n_cols))
+                self.goals.append(candidate)
         else:
             self.walls = walls
             self.traps = traps
