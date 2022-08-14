@@ -216,5 +216,8 @@ class Grid_World:
         for state in policy_str:
             policy_arr[state] = policy_str[state]
 
+        for state in self._terminal_states:
+            policy_arr[state] = "x"
+
         print("Policy:")
         print(policy_arr)

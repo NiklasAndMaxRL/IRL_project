@@ -13,16 +13,16 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 
 GAMMA = 0.95
-VALUE_ITERATION_TRAINING_N = 25#50
-IRL_TRAINING_N = 5#10
+VALUE_ITERATION_TRAINING_N = 25
+IRL_TRAINING_N = 5
 
-NUMBER_OF_TRAJECTORIES = 10
+NUMBER_OF_TRAJECTORIES = 40
 MAXIMUM_TRAJECTORY_LENGTH = 50
 
 # GW_SIZE = (5, 5)
-GW_SIZES = [(2, 5), (5, 5), (5, 5)]  # [(x, x) for x in np.arange(5,11, 5)]
-GW_TRAPS = []
-GW_GOALS = [(0, 4)]
+GW_SIZES = [(4, 6)]  # [(x, x) for x in np.arange(5,11, 5)]
+GW_TRAPS = [(1, 2)]
+GW_GOALS = [(3, 5)]
 
 
 def train_value_iteration(gw_env: Grid_World, verbose=False):
@@ -105,24 +105,16 @@ def train_q_learning(gw_env: Grid_World, verbose=False):
 
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]], train_func: Callable):
 
-
-    np_normalize = lambda x, norm: x/np.linalg.norm(x, ord=norm)
-
     # prepare reference reward function
     reward_func_ref = deepcopy(env.get_board())
     reward_func_preds = []
-    print('reward_func_ref', reward_func_ref)
+    print('reward_func_ref\n', reward_func_ref)
 
-    # prepare reference policy
-    #opt_policy_ref = deepcopy(opt_policy)
-    #print('opt_policy_ref', opt_policy_ref)
+    minmax_scaler = MinMaxScaler(feature_range=(-1, 1))
 
-    # minmax_scaler = MinMaxScaler()
-    reward_func_ref = np_normalize(reward_func_ref, 'fro')
-    print('reward_func_ref_norm \n', reward_func_ref)
-
-    # reward_func_ref = minmax_scaler.fit_transform(reward_func_ref)
-    # print('minmax_scaler.fit_transform(reward_func_ref)', minmax_scaler.fit_transform(reward_func_ref))
+    reward_func_ref_shape = reward_func_ref.shape
+    reward_func_ref = minmax_scaler.fit_transform(reward_func_ref.reshape(-1, 1)).reshape(reward_func_ref_shape)
+    print('MinMax scaled reward_func_ref:\n', reward_func_ref)
 
     irl_agent = IRL_from_sampled_trajectories(d=(GW_SIZE[0] * 4, GW_SIZE[1] * 4),
                                               env_ranges=((0, GW_SIZE[0]), (0, GW_SIZE[1])),
@@ -138,6 +130,8 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
     # while True:
     for i in range(IRL_TRAINING_N):
+        print(f"Iteration {i}...")
+
         # step 3: generate trajectories and compute the value estimate for a random policy
         candidate_trajectories = env.generate_trajectories(policy=candidate_policies[-1],
                                                            n_traj=NUMBER_OF_TRAJECTORIES,
@@ -152,18 +146,15 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
         # step 6: find optimal policy under new reward function and add to 'candidate_policies' list
         env.set_reward_func(reward_func)
-        # minmax_scaler = MinMaxScaler()
-        print('env.get_board \n', env.get_board())
-        reward_func_preds.append(np_normalize(abs(deepcopy(env.get_board())), 'fro'))
-        # print('reward_func_preds[-1] \n', reward_func_preds[-1])
-        # reward_func_preds.append(minmax_scaler.fit_transform(deepcopy(env.get_board())))
-        print('reward_func_preds \n', reward_func_preds)
+        print("Latest non-Scaled reward func:\n", env.get_board())
+        scaled_board = minmax_scaler.fit_transform(env.get_board().reshape(-1, 1)).reshape(env.get_board().shape)
+        env.set_board(new_board=scaled_board)
 
-        candidate_policies.append(train_func(gw_env=env, verbose=False))  # train_value_iteration(gw_env=env))
+        reward_func_preds.append(env.get_board())
 
-        print(f"Iteration {i}...")
-        # print(f"Alphas ({len(irl_agent.get_alphas())}):\n", np.array(irl_agent.get_alphas()).reshape(GW_SIZE))
-        print("Latest rewardfunc:\n", reward_func_preds[-1])
+        candidate_policies.append(train_func(gw_env=env, verbose=True))  # train_value_iteration(gw_env=env))
+
+        print("Latest Scaled reward func:\n", reward_func_preds[-1])
         env.display_policy(policy=candidate_policies[-1])
         print("============================================================\n" * 2)
 
@@ -204,7 +195,7 @@ if __name__ == "__main__":
     policy_loss = []
 
     for GW_SIZE in GW_SIZES:
-        environment = Grid_World(size=GW_SIZE, traps=GW_TRAPS, goals=GW_GOALS, randomize_board=True)
+        environment = Grid_World(size=GW_SIZE, traps=GW_TRAPS, goals=GW_GOALS, randomize_board=False)
 
         train_func = train_value_iteration
 
