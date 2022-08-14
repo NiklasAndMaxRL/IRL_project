@@ -25,7 +25,7 @@ GW_TRAPS = []
 GW_GOALS = [(0, 4)]
 
 
-def train_value_iteration(gw_env: Grid_World):
+def train_value_iteration(gw_env: Grid_World, verbose=False):
     vi_agent = ValueIterationAgent(states=gw_env.get_state_space(),
                                    terminal_states=gw_env.get_terminal_states(),
                                    reward_function=gw_env.get_reward_func(),
@@ -53,16 +53,18 @@ def train_value_iteration(gw_env: Grid_World):
     # print("Board:")
     # print(gw_env.get_board())
 
-    gw_env.display_value_function(value_func=vi_agent.get_value_function())
+    if verbose:
+        gw_env.display_value_function(value_func=vi_agent.get_value_function())
 
     vi_agent.construct_policy(gw_env.get_action_state_pairs)
 
-    gw_env.display_policy(policy=vi_agent.get_policy())
+    if verbose:
+        gw_env.display_policy(policy=vi_agent.get_policy())
 
     return vi_agent.get_policy()
 
 
-def train_q_learning(gw_env: Grid_World):
+def train_q_learning(gw_env: Grid_World, verbose=False):
     ql_agent = QLearningAgent(states=gw_env.get_state_space(),
                               terminal_states=gw_env.get_terminal_states(),
                               reward_function=gw_env.get_reward_func(),
@@ -90,11 +92,13 @@ def train_q_learning(gw_env: Grid_World):
     # print("Board:")
     # print(gw_env.get_board())
 
-    gw_env.display_q_function(q_func=ql_agent.get_Q_function())
+    if verbose:
+        gw_env.display_q_function(q_func=ql_agent.get_Q_function())
 
     ql_agent.construct_policy(gw_env.get_action_state_pairs)
 
-    gw_env.display_policy(policy=ql_agent.get_policy())
+    if verbose:
+        gw_env.display_policy(policy=ql_agent.get_policy())
 
     return ql_agent.get_policy()
 
@@ -121,14 +125,13 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
     # step 2: given optimal trajectories, compute the value estimate
     optimal_value_estimate = irl_agent.compute_value_estimate(trajs=optimal_trajectories)
-    print("Optimal value estimates from optimal trajectory:\n", optimal_value_estimate)
 
-    # step 3: generate trajectories and compute the value estimate for a random policy
     candidate_policies = [env.construct_random_policy()]
     candidate_value_estimates = []
 
     # while True:
     for i in range(IRL_TRAINING_N):
+        # step 3: generate trajectories and compute the value estimate for a random policy
         candidate_trajectories = env.generate_trajectories(policy=candidate_policies[-1],
                                                            n_traj=NUMBER_OF_TRAJECTORIES,
                                                            max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
@@ -149,12 +152,11 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         # reward_func_preds.append(minmax_scaler.fit_transform(deepcopy(env.get_board())))
         print('reward_func_preds \n', reward_func_preds)
 
-        # TODO Niklas: replace train_value_iteration by train_q_function -> argument
-        candidate_policies.append(train_func(gw_env=env))  # train_value_iteration(gw_env=env))
+        candidate_policies.append(train_func(gw_env=env, verbose=False))  # train_value_iteration(gw_env=env))
 
         print(f"Iteration {i}...")
         # print(f"Alphas ({len(irl_agent.get_alphas())}):\n", np.array(irl_agent.get_alphas()).reshape(GW_SIZE))
-        print("Latest rewardfunc:\n", env.get_board())
+        print("Latest rewardfunc:\n", reward_func_preds[-1])
         env.display_policy(policy=candidate_policies[-1])
         print("============================================================\n" * 2)
 
@@ -200,10 +202,10 @@ if __name__ == "__main__":
 
         if args.value_iteration:
             print("Training via value iteration...")
-            greedy_policy = train_value_iteration(gw_env=environment)
+            greedy_policy = train_value_iteration(gw_env=environment, verbose=True)
         elif args.q_learning:
             print("Training via q-learning...")
-            greedy_policy = train_q_learning(gw_env=environment)
+            greedy_policy = train_q_learning(gw_env=environment, verbose=True)
             train_func = train_q_learning
         else:
             # load from file (?)
