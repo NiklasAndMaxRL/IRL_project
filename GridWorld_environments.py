@@ -210,7 +210,6 @@ class Grid_World:
     def display_policy(self, policy: Dict[Tuple[int], Tuple[int]]):
 
         policy_str = {state: self.actions_to_str_map[action] for state, action in policy.items()}
-
         policy_arr = np.zeros((self.n_rows, self.n_cols), str)
 
         for state in policy_str:

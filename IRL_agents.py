@@ -110,7 +110,7 @@ class IRL_from_sampled_trajectories:
                 for k, approx_center in enumerate(self.d_centers):
                     temp_value += alphas[k] * self._approx_func(x=(i, j), center=approx_center)
 
-                new_reward[(i, j)] = temp_value
+                new_reward[(i, j)] = temp_value #new_reward[(self.env_n_rows - 1 - i, self.env_n_cols - 1 - j)] = temp_value
 
         return new_reward
 
