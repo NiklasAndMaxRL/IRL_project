@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 
 GAMMA = 0.95
-VALUE_ITERATION_TRAINING_N = 50
-IRL_TRAINING_N = 10
+VALUE_ITERATION_TRAINING_N = 25#50
+IRL_TRAINING_N = 5#10
 
 NUMBER_OF_TRAJECTORIES = 10
 MAXIMUM_TRAJECTORY_LENGTH = 50
 
 # GW_SIZE = (5, 5)
-GW_SIZES = [(5, 5), (10, 10), (20, 20)]  # [(x, x) for x in np.arange(5,11, 5)]
+GW_SIZES = [(2, 5), (5, 5), (5, 5)]  # [(x, x) for x in np.arange(5,11, 5)]
 GW_TRAPS = []
 GW_GOALS = [(0, 4)]
 
@@ -104,13 +104,19 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
 
     np_normalize = lambda x, norm: x/np.linalg.norm(x, ord=norm)
 
+    # prepare reference reward function
     reward_func_ref = deepcopy(env.get_board())
     reward_func_preds = []
     print('reward_func_ref', reward_func_ref)
 
+    # prepare reference policy
+    #opt_policy_ref = deepcopy(opt_policy)
+    #print('opt_policy_ref', opt_policy_ref)
+
     # minmax_scaler = MinMaxScaler()
     reward_func_ref = np_normalize(reward_func_ref, 'fro')
     print('reward_func_ref_norm \n', reward_func_ref)
+
     # reward_func_ref = minmax_scaler.fit_transform(reward_func_ref)
     # print('minmax_scaler.fit_transform(reward_func_ref)', minmax_scaler.fit_transform(reward_func_ref))
 
@@ -150,7 +156,6 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         # reward_func_preds.append(minmax_scaler.fit_transform(deepcopy(env.get_board())))
         print('reward_func_preds \n', reward_func_preds)
 
-        # TODO Niklas: replace train_value_iteration by train_q_function -> argument
         candidate_policies.append(train_func(gw_env=env))  # train_value_iteration(gw_env=env))
 
         print(f"Iteration {i}...")
@@ -164,13 +169,13 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
     # vec1 = [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]
     # vec2 = np.array(reward_func_ref).flatten()
     # print('l2-loss', np.linalg.norm(vec1[0] - vec2))
-    reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
+    #reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
 
-    value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
+    #value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
     # plt.plot(reward_loss)
     # plt.show()
 
-    return {'reference_reward_func': reward_func_ref, 'policy_pred': candidate_policies, 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
+    return {'reference_reward_func': reward_func_ref, 'policy_pred': np.mean(np.array([ np_normalize(list(pol.values()), 1) for pol in candidate_policies ]), axis=0), 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
 
 
 def calc_value_distance(value_estimates_ref, value_estimates_pred):
@@ -193,6 +198,7 @@ if __name__ == "__main__":
     ref_reward_funcs = []
     avg_pred_reward_funcs = []
     reward_loss = []
+    policy_loss = []
 
     for GW_SIZE in GW_SIZES:
         environment = Grid_World(size=GW_SIZE, traps=GW_TRAPS, goals=GW_GOALS, randomize_board=True)
@@ -221,7 +227,18 @@ if __name__ == "__main__":
             estimated_rewards = irl_reward_estimation(env=environment, optimal_trajectories=trajectories, train_func=train_func)
             ref_reward_funcs.append(estimated_rewards['reference_reward_func'])
             avg_pred_reward_funcs.append(estimated_rewards['avg_predicted_reward_func'])
+            # Using default value for reward loss -> Frobenius for matrices and L2-loss for vectors
             reward_loss.append(np.linalg.norm(estimated_rewards['reference_reward_func'] - estimated_rewards['avg_predicted_reward_func']))
+            # Using L1-Loss for policy loss as described by Ng and Russel in 2000
+            policy_loss.append(np.linalg.norm(estimated_rewards['policy_pred'] - np.array(list(greedy_policy.values())), ord=1 ))
+            
+            print('**********************************************')
+            print('*****************REWARD LOSS******************')
+            print(reward_loss)
+            print('**********************************************')
+            print('*****************POLICY LOSS*************************')
+            print(policy_loss)
+            print('**********************************************')
 
     print('reward_loss \n', reward_loss)
     plt.plot(reward_loss)
