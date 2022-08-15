@@ -21,7 +21,7 @@ class Grid_World:
                  goals: List[Tuple[int]] = [],
                  randomize_board: bool = False):
 
-        self.possible_actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
+        self.action_space = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
         self.actions_to_str_map = {(1, 0): "v", (0, 1): ">", (-1, 0): "^", (0, -1): "<", None: "-"}
         self.gameover, self.win, self.lose = False, False, False
 
@@ -101,7 +101,7 @@ class Grid_World:
         return {state: self.board[state] for state in self._state_space}
 
     def get_action_space(self):
-        return self.possible_actions
+        return self.action_space
 
     def get_state_space(self):
         return self._state_space
@@ -109,18 +109,22 @@ class Grid_World:
     def get_terminal_states(self):
         return self._terminal_states
 
+    def get_possible_actions(self, state: Tuple[int]) -> List[Tuple[int]]:
+        """Return the actions that are allowed in the given state"""
+        return [action for action in self.action_space if state != self.get_new_state_on_action(old_state=state, action=action)]
+
     def get_action_state_pairs(self, state: Tuple[int]) -> Dict[Tuple[int], Tuple[int]]:
         """Return a Dict with the possible actions and the results states at a given state"""
-        return {action: self.get_new_state_on_action(old_state=state, action=action) for action in self.possible_actions}
+        return {action: self.get_new_state_on_action(old_state=state, action=action) for action in self.get_possible_actions(state=state)}
 
     def _get_random_action(self):
-        return self.possible_actions[np.random.choice([x for x, _ in enumerate(self.possible_actions)])]  # optimize!!!
+        return self.action_space[np.random.choice([x for x, _ in enumerate(self.action_space)])]  # optimize!!!
 
     def construct_random_policy(self):
         policy = {}
         for state in self._state_space:
             if state in self._terminal_states:
-                policy[state] = self.possible_actions[0]  # for consistency, on termial states we take the first action in the list. This is arbitrary but necessary
+                policy[state] = self.action_space[0]  # for consistency, on termial states we take the first action in the list. This is arbitrary but necessary
             else:
                 policy[state] = self._get_random_action()
         return policy
@@ -155,8 +159,8 @@ class Grid_World:
         return new_state
 
     def take_action(self, action, verbose=False):
-        if action not in self.possible_actions:
-            print(f"Invalid action '{action}'. Please choose one from '{self.possible_actions}'")
+        if action not in self.action_space:
+            print(f"Invalid action '{action}'. Please choose one from '{self.action_space}'")
             return self.player_pos, 0, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
 
         # calculate the new positon
@@ -189,10 +193,10 @@ class Grid_World:
         return trajs
 
     def display_q_function(self, q_func: Dict[Tuple[int], float]):
-        q_func_arr = np.zeros((self.n_rows, self.n_cols, len(self.possible_actions)))
+        q_func_arr = np.zeros((self.n_rows, self.n_cols, len(self.action_space)))
 
         for state in q_func:
-            for act_idx, action in enumerate(self.possible_actions):
+            for act_idx, action in enumerate(self.action_space):
                 q_func_arr[state[0], state[1], act_idx] = q_func[state][action]
 
         print("Q function:")
