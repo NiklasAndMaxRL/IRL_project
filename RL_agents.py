@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Any
+from typing import Callable, Dict, List, Any, Tuple
 import numpy as np
 
 
@@ -109,25 +109,15 @@ class QLearningAgent(PolicyExecutingAgent):
     def get_Q_function(self) -> Dict[Any, float]:
         return self._Q_function
 
-    def get_optimal_action(self, origin: Any, action_state_pairs: Dict[Any, Any]) -> Any:
-        """Return the optimal action from a Dict with actions-state pairs"""        
-        q_values = []
+    def update_Q_value(self, old_state:Tuple[int], new_state:Tuple[int], action:Tuple[int]) -> int:
+        q_value = self.get_state_action_value(state=old_state, action=action)
+        q_value = q_value + self.learning_rate * (self._reward_func[new_state] + self.gamma * np.max(list(self.get_Q_function()[new_state].values())) - q_value )
+        self.set_state_action_value(old_state, action, q_value)
+        return q_value
 
-        optimal_value = 0
-        optimal_idx = 0
-        for idx, action in enumerate(action_state_pairs.keys()):
-            #print(list(action_state_pairs.values())[0])
-            state = list(action_state_pairs.values())[idx]
-            q_value = self.get_state_action_value(state=state, action=action) #get_Q_function()[state][action]
-            q_value = q_value + self.learning_rate * (self._reward_func[state] + self.gamma * np.max(list(self.get_Q_function()[state].values())) - q_value )
-            q_values.append(q_value)
-            self.set_state_action_value(origin, action, q_value)
-            if ( optimal_value < q_value ):
-                optimal_value = q_value
-                optimal_idx = idx
-
-        # Check https://www.geeksforgeeks.org/python-get-key-with-maximum-value-in-dictionary/ to understand the one-liner
-        return max(zip(q_values, action_state_pairs.keys()))[1]
+    def get_greedy_action(self, state) -> Tuple[int]:
+        """ Returns the tuple of the action with the highest Q-Value from the given state """
+        return list(self.get_Q_function()[state])[np.argmax(list(self.get_Q_function()[state].values()))]
 
     def get_state_action_value(self, state, action) -> float:
         return self._Q_function[state][action]
@@ -143,6 +133,6 @@ class QLearningAgent(PolicyExecutingAgent):
             if state in self._terminal_states:
                 policy[state] = self.actions[0]  # for consistency, on terminal states we take the first action in the list. This is arbitrary but necessary
             else:
-                policy[state] = self.get_optimal_action(state, get_action_state_pairs(state))
+                policy[state] = self.get_greedy_action(state)
         self.policy = policy
         return self.policy
