@@ -25,9 +25,9 @@ class ValueIterationAgent(PolicyExecutingAgent):
                  reward_function: Dict[Any, float],
                  actions: List[Any],
                  gamma: float = 1,
-                 threshold: float = 1e-2) -> None:
+                 threshold: float = 1e-4) -> None:
 
-        # initialise value function randomly
+        # initialise value function to zero (consider random initialization?)
         self._value_function = {state: .0 for state in states}
         # set value of terminal states to 0
         self._terminal_states = terminal_states
@@ -41,11 +41,22 @@ class ValueIterationAgent(PolicyExecutingAgent):
         # save hyperparameters
         self.gamma = gamma
         self.threshold = threshold
+        self.value_unchanged_counter = 0
+        self.value_converged = False  # this flag indicates convergence by value
 
-        self.converged = False
+    def reset_agent(self):
+        self._value_function = {state: .0 for state in self._value_function}
+        self.value_unchanged_counter = 0
+        self.value_converged = False
 
     def get_value_function(self) -> Dict[Any, float]:
         return self._value_function
+
+    def set_value_function(self, new_value_function: Dict[Any, float]):
+        if list(self._value_function.keys()) == list(new_value_function.keys()):
+            self._value_function = new_value_function
+        else:
+            raise ValueError("Invalid value function. The states differ but they should be the same on both value functions.")
 
     def get_optimal_action(self, action_state_pairs: Dict[Any, Any]) -> Any:
         """Return the optimal action from a Dict with actions-state pairs"""
@@ -57,9 +68,20 @@ class ValueIterationAgent(PolicyExecutingAgent):
         return self._value_function[state]
 
     def set_state_value(self, state, new_value):
+        """Set the value of state to new_value. Also check for convergence.
+
+        If the updated values are close to the old ones (by .threshold) for one full round, set the .converged flag to True"""
+        if np.isclose(self._value_function[state], new_value, abs_tol=self.threshold):
+            self.value_unchanged_counter += 1
+            if self.value_unchanged_counter > len(self._value_function):
+                self.value_converged = True
+                self.value_unchanged_counter = 0
+        else:
+            self.value_unchanged_counter = 0
+
         self._value_function[state] = new_value
 
-    def construct_policy(self, get_action_state_pairs: Callable):
+    def construct_greedy_policy(self, get_action_state_pairs: Callable):
         """Construct a policy out of the current value function. To do so, a function that takes a state and returns a Dict
         with the action-state pairs is needed (provided by the environment."""
         policy = {}
@@ -125,7 +147,7 @@ class QLearningAgent(PolicyExecutingAgent):
     def set_state_action_value(self, state, action, new_value):
         self._Q_function[state][action] = new_value
 
-    def construct_policy(self, get_action_state_pairs: Callable):
+    def construct_greedy_policy(self, get_action_state_pairs: Callable):
         """Construct a policy out of the current value function. To do so, a function that takes a state and returns a Dict
         with the action-state pairs is needed (provided by the environment."""
         policy = {}

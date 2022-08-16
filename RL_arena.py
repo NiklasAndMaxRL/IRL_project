@@ -33,7 +33,7 @@ def train_value_iteration(gw_env: Grid_World, verbose=False):
                                    gamma=GAMMA)
 
     iters = 0
-    while iters < VALUE_ITERATION_TRAINING_N and not vi_agent.converged:
+    while iters < VALUE_ITERATION_TRAINING_N and not vi_agent.value_converged:
 
         for state in gw_env.get_state_space():
 
@@ -51,7 +51,7 @@ def train_value_iteration(gw_env: Grid_World, verbose=False):
     if verbose:
         gw_env.display_value_function(value_func=vi_agent.get_value_function())
 
-    vi_agent.construct_policy(gw_env.get_action_state_pairs)
+    vi_agent.construct_greedy_policy(gw_env.get_action_state_pairs)
 
     if verbose:
         gw_env.display_policy(policy=vi_agent.get_policy())
@@ -116,7 +116,7 @@ def train_q_learning(gw_env: Grid_World, n_episodes=1000, verbose=False, policy=
     if verbose:
         gw_env.display_q_function(q_func=ql_agent.get_Q_function())
 
-    ql_agent.construct_policy(gw_env.get_action_state_pairs)
+    ql_agent.construct_greedy_policy(gw_env.get_action_state_pairs)
 
     if verbose:
         gw_env.display_policy(policy=ql_agent.get_policy())
