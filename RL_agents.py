@@ -71,7 +71,7 @@ class ValueIterationAgent(PolicyExecutingAgent):
         """Set the value of state to new_value. Also check for convergence.
 
         If the updated values are close to the old ones (by .threshold) for one full round, set the .converged flag to True"""
-        if np.isclose(self._value_function[state], new_value, abs_tol=self.threshold):
+        if np.isclose(self._value_function[state], new_value, atol=self.threshold):
             self.value_unchanged_counter += 1
             if self.value_unchanged_counter > len(self._value_function):
                 self.value_converged = True
