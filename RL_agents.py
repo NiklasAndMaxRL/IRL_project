@@ -98,6 +98,7 @@ class QLearningAgent(PolicyExecutingAgent):
 
     def __init__(self,
                  states: List[Any],
+                 size: Tuple[int],
                  terminal_states: List[Any],
                  reward_function: Dict[Any, float],
                  actions: List[Any],
@@ -128,7 +129,18 @@ class QLearningAgent(PolicyExecutingAgent):
 
         self.converged = False
 
-    def get_Q_function(self) -> Dict[Any, float]:
+        self.n_rows, self.n_cols = size
+
+    def get_Q_function(self, mat_repr=False) -> Dict[Any, float]:
+        """ Return current Q-function in either (default case) a dictionary representation 
+            or (mat_repr=True) in a matrix representation """
+        if mat_repr:
+            q_func_arr = np.zeros((self.n_rows, self.n_cols, len(self.actions)))
+
+            for state in self._Q_function:
+                for act_idx, action in enumerate(self.actions):
+                    q_func_arr[state[0], state[1], act_idx] = self._Q_function[state][action]
+            return q_func_arr
         return self._Q_function
 
     def update_Q_value(self, old_state:Tuple[int], new_state:Tuple[int], action:Tuple[int]) -> int:
