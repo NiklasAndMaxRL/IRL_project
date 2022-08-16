@@ -21,8 +21,8 @@ class Grid_World:
                  goals: List[Tuple[int]] = [],
                  randomize_board: bool = False):
 
-        self.action_space = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # South, East, North, West
-        self.actions_to_str_map = {(1, 0): "v", (0, 1): ">", (-1, 0): "^", (0, -1): "<", None: "-"}
+        self.action_space = [(0, 0), (1, 0), (0, 1), (-1, 0), (0, -1)]  # Stay, South, East, North, West
+        self.actions_to_str_map = {(0, 0): "o", (1, 0): "v", (0, 1): ">", (-1, 0): "^", (0, -1): "<", None: "-"}
         self.gameover, self.win, self.lose = False, False, False
 
         self.n_rows, self.n_cols = size
@@ -177,7 +177,7 @@ class Grid_World:
     def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int):
         trajs = []
         for _ in range(n_traj):
-            initial_state = self._state_space[np.random.choice(range(len(self._state_space)))]
+            initial_state = self._state_space[np.random.choice(len(self._state_space))]
             self.reset_env(state=initial_state)
             traj = [initial_state]
 
@@ -219,8 +219,8 @@ class Grid_World:
         for state in policy_str:
             policy_arr[state] = policy_str[state]
 
-        for state in self._terminal_states:
-            policy_arr[state] = "x"
+        # for state in self._terminal_states:
+        #     policy_arr[state] = "x"
 
         print("Policy:")
         print(policy_arr)
