@@ -32,10 +32,14 @@ class IRL_from_sampled_trajectories:
                   f"the discrete space size '{env_discrete_size}' over all dimensions.")
 
         # determine the approximating funcs centers
-        d_row_centers, step = np.linspace(self.env_rows_min, self.env_rows_max, self.d_rows, endpoint=False, retstep=True)
-        # d_row_centers += step / 2
-        d_col_centers, step = np.linspace(self.env_cols_min, self.env_cols_max, self.d_cols, endpoint=False, retstep=True)
-        # d_col_centers += step / 2
+        d_row_centers, step = np.linspace(self.env_rows_min - 1, self.env_rows_max + 1, self.d_rows, endpoint=False, retstep=True)
+        d_row_centers += step / 2
+        # d_row_centers = np.append(d_row_centers, [min(d_row_centers) - step, max(d_row_centers) + step])
+        # d_row_centers = np.sort(d_row_centers)
+        d_col_centers, step = np.linspace(self.env_cols_min - 1, self.env_cols_max + 1, self.d_cols, endpoint=False, retstep=True)
+        d_col_centers += step / 2
+        # d_col_centers = np.append(d_col_centers, [min(d_col_centers) - step, max(d_col_centers) + step])
+        # d_col_centers = np.sort(d_col_centers)
         # aggregate to one list
         self.d_centers = [(i, j) for i in d_row_centers.round(4) for j in d_col_centers.round(4)]
 
@@ -110,7 +114,7 @@ class IRL_from_sampled_trajectories:
                 for k, approx_center in enumerate(self.d_centers):
                     temp_value += alphas[k] * self._approx_func(x=(i, j), center=approx_center)
 
-                new_reward[(i, j)] = temp_value
+                new_reward[(i, j)] = temp_value  # new_reward[(self.env_n_rows - 1 - i, self.env_n_cols - 1 - j)] = temp_value
 
         return new_reward
 
