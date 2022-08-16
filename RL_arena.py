@@ -13,16 +13,16 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 
 GAMMA = 0.95
-VALUE_ITERATION_TRAINING_N = 25
+VALUE_ITERATION_TRAINING_N = 50
 IRL_TRAINING_N = 5
 
 NUMBER_OF_TRAJECTORIES = 40
 MAXIMUM_TRAJECTORY_LENGTH = 50
 
 # GW_SIZE = (5, 5)
-GW_SIZES = [(4, 6)]  # [(x, x) for x in np.arange(5,11, 5)]
-GW_TRAPS = [(1, 2)]
-GW_GOALS = [(3, 5)]
+GW_SIZES = [(5, 5)]  # [(x, x) for x in np.arange(5,11, 5)]
+GW_TRAPS = []
+GW_GOALS = [(4, 4)]
 
 
 def train_value_iteration(gw_env: Grid_World, verbose=False):
@@ -47,11 +47,6 @@ def train_value_iteration(gw_env: Grid_World, verbose=False):
             vi_agent.set_state_value(state=state, new_value=(gw_env.get_state_reward(state=next_state) + GAMMA * next_state_value))
 
         iters += 1
-        # print(f"Iteration {iters}")
-        # print(vi_agent.get_value_function())
-
-    # print("Board:")
-    # print(gw_env.get_board())
 
     if verbose:
         gw_env.display_value_function(value_func=vi_agent.get_value_function())
@@ -64,34 +59,60 @@ def train_value_iteration(gw_env: Grid_World, verbose=False):
     return vi_agent.get_policy()
 
 
-def train_q_learning(gw_env: Grid_World, verbose=False):
+def train_q_learning(gw_env: Grid_World, n_episodes=1000, verbose=False, policy="eps_greedy", eps=0.2, max_episode_len=100, gamma=0.95):
     ql_agent = QLearningAgent(states=gw_env.get_state_space(),
                               terminal_states=gw_env.get_terminal_states(),
                               reward_function=gw_env.get_reward_func(),
                               actions=gw_env.get_action_space(),
-                              gamma=GAMMA)
-
-    iters = 0
-    while iters < VALUE_ITERATION_TRAINING_N and not ql_agent.converged:
-
-        for state in gw_env.get_state_space():
-
-            if state in gw_env.get_terminal_states():
-                continue
-
-            opt_act = ql_agent.get_optimal_action(state, action_state_pairs=gw_env.get_action_state_pairs(state=state))
-            next_state = gw_env.get_new_state_on_action(old_state=state, action=opt_act)
-            next_q_value = ql_agent.get_state_action_value(state=next_state, action=opt_act)
-
-            ql_agent.set_state_action_value(state=state, action=opt_act, new_value=(gw_env.get_state_reward(state=next_state) + GAMMA * next_q_value))
-
-        iters += 1
-        # print(f"Iteration {iters}")
-        # print(vi_agent.get_value_function())
-
-    # print("Board:")
-    # print(gw_env.get_board())
-
+                              gamma=gamma)
+    
+    # init episodes
+    episodes = []
+    
+    # Define state_space without terminal states for getting starting position
+    state_space = deepcopy(gw_env.get_state_space()) # all states
+    terminal_states = gw_env.get_terminal_states()
+    for terminal_state in terminal_states:
+        state_space.remove(terminal_state) # not non absorbing state_space
+    
+    for n in range(n_episodes):
+        
+        episode = []
+        
+        # random starting position
+        start_idx = (np.random.choice(len(state_space)))
+        start = state_space[start_idx]
+        
+        episode.append(start)
+        
+        i = 0
+        terminal = False
+        
+        while ( ( i < max_episode_len ) and ( not terminal ) ):
+            i += 1
+            
+            # Choose Action from S derived by given policy
+            if policy == "eps_greedy":
+                if np.random.uniform() < (1-eps):
+                    # Choose greedy action -> highest Q-Value
+                    chosen_action = ql_agent.get_greedy_action(episode[-1])
+                else:
+                    # Choose random action form action space
+                    action_space = gw_env.get_action_space()
+                    chosen_action = action_space[np.random.choice(len(action_space))]
+            
+            new_state = gw_env.get_new_state_on_action(episode[-1], chosen_action)
+            
+            # Reward is taken from Q_learning agent -> it knows the reward function from the environment
+            ql_agent.update_Q_value(episode[-1], new_state, chosen_action)
+            
+            episode.append(new_state)
+            
+            if new_state in terminal_states:
+                terminal = True
+        
+        episodes.append(episode)
+    
     if verbose:
         gw_env.display_q_function(q_func=ql_agent.get_Q_function())
 
@@ -100,7 +121,7 @@ def train_q_learning(gw_env: Grid_World, verbose=False):
     if verbose:
         gw_env.display_policy(policy=ql_agent.get_policy())
 
-    return ql_agent.get_policy()
+    return ql_agent.get_policy()         
 
 
 def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]], train_func: Callable):
@@ -123,6 +144,7 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
                                               gamma=GAMMA)
 
     # step 2: given optimal trajectories, compute the value estimate
+    print("Computing value estimates for optimal trajectories...")
     optimal_value_estimate = irl_agent.compute_value_estimate(trajs=optimal_trajectories)
 
     candidate_policies = [env.construct_random_policy()]
@@ -133,12 +155,15 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         print(f"Iteration {i}...")
 
         # step 3: generate trajectories and compute the value estimate for a random policy
+        print("Generating trajectories for the candidate policy...")
         candidate_trajectories = env.generate_trajectories(policy=candidate_policies[-1],
                                                            n_traj=NUMBER_OF_TRAJECTORIES,
                                                            max_traj_length=MAXIMUM_TRAJECTORY_LENGTH)
+        print("Computing value estimates for condidate trajectories...")
         candidate_value_estimates.append(irl_agent.compute_value_estimate(trajs=candidate_trajectories))
 
         # step 4: obtain new alphas
+        print("Solving linear programming...")
         irl_agent.solve_lp(optimal_value_estimate, candidate_value_estimates)
 
         # step 5: construct new reward function from the alphas
@@ -158,18 +183,7 @@ def irl_reward_estimation(env: Grid_World, optimal_trajectories: List[List[Any]]
         env.display_policy(policy=candidate_policies[-1])
         print("============================================================\n" * 2)
 
-    # print('reward_func_pred \n', [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]) #[np.array(one_candidate_value_estimates).flatten().shape for one_candidate_value_estimates in candidate_value_estimates ] )
-    # print('reward_func_ref \n', np.array(reward_func_ref).flatten())
-    # vec1 = [np.array(reward_func_pred).flatten() for reward_func_pred in reward_func_preds]
-    # vec2 = np.array(reward_func_ref).flatten()
-    # print('l2-loss', np.linalg.norm(vec1[0] - vec2))
-    #reward_loss = [ np.linalg.norm(np.array(reward_func_ref).flatten() - np.array(reward_func_pred).flatten()) for reward_func_pred in reward_func_preds ]
-
-    #value_loss = [ calc_value_distance(optimal_value_estimate, one_candidate_value_estimates) for one_candidate_value_estimates in candidate_value_estimates ]
-    # plt.plot(reward_loss)
-    # plt.show()
-
-    return {'reference_reward_func': reward_func_ref, 'policy_pred': np.mean(np.array([ np_normalize(list(pol.values()), 1) for pol in candidate_policies ]), axis=0), 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
+    return {'reference_reward_func': reward_func_ref, 'policy_pred': np.mean(np.array([list(pol.values()) for pol in candidate_policies ]), axis=0), 'avg_predicted_reward_func': np.mean(np.array(reward_func_preds), axis=0)}
 
 
 def calc_value_distance(value_estimates_ref, value_estimates_pred):
