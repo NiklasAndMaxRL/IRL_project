@@ -174,19 +174,19 @@ class Grid_World:
             print(f"Taken action '{action}'. New state is '{self.player_pos}' and received a reward...")
         return self.player_pos, reward, self.gameover, self.win, self.lose  # player_pos, reward, gameover, win, lose
 
-    def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int):
+    def generate_trajectories(self, policy: Dict[Any, Any], n_traj: int, max_traj_length: int, return_state_action_pairs: bool = False):
         trajs = []
         for _ in range(n_traj):
             initial_state = self._state_space[np.random.choice(len(self._state_space))]
             self.reset_env(state=initial_state)
-            traj = [initial_state]
+            traj = []
 
             for _ in range(max_traj_length):
+                action = policy[self.player_pos]
+                traj.append((self.player_pos, action) if return_state_action_pairs else self.player_pos)
                 if self.gameover:  # check for gameover first, in case the initial state is already terminal
                     break
-                action = policy[self.player_pos]
                 self.take_action(action=action)
-                traj.append(self.player_pos)
             trajs.append(traj)
 
         self.reset_env(state=self._state_space[0])
