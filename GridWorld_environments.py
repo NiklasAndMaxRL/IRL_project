@@ -87,6 +87,9 @@ class Grid_World:
     def get_board(self):
         return self.board
 
+    def get_board_shape(self):
+        return np.array(self.board).shape
+
     def set_board(self, new_board):
         self.board = new_board
 
